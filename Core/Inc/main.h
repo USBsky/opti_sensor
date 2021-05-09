@@ -32,7 +32,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "LED_Controller.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -80,6 +80,8 @@ void Error_Handler(void);
 #define LED6_GPIO_Port GPIOB
 #define LED7_Pin GPIO_PIN_7
 #define LED7_GPIO_Port GPIOB
+#define LED8_Pin GPIO_PIN_8
+#define LED8_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

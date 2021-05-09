@@ -22,7 +22,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,7 +44,7 @@ ADC_HandleTypeDef hadc1;
 TIM_HandleTypeDef htim10;
 
 /* USER CODE BEGIN PV */
-
+float adc_value;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -78,7 +77,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+	
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -93,7 +92,7 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
-
+	HAL_TIM_Base_Start_IT(&htim10);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -248,15 +247,15 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LED1_Pin|LED2_Pin|LED3_Pin|LED4_Pin
-                          |LED5_Pin|LED6_Pin|LED7_Pin, GPIO_PIN_RESET);
+                          |LED5_Pin|LED6_Pin|LED7_Pin|LED8_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, LED_SEL_1_Pin|LED_SEL_2_Pin|LED_SEL_3_Pin|LED_SEL_4_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : LED1_Pin LED2_Pin LED3_Pin LED4_Pin
-                           LED5_Pin LED6_Pin LED7_Pin */
+                           LED5_Pin LED6_Pin LED7_Pin LED8_Pin */
   GPIO_InitStruct.Pin = LED1_Pin|LED2_Pin|LED3_Pin|LED4_Pin
-                          |LED5_Pin|LED6_Pin|LED7_Pin;
+                          |LED5_Pin|LED6_Pin|LED7_Pin|LED8_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -279,7 +278,24 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	if(htim == &htim10) {
+		HAL_ADC_Start_IT(&hadc1);
+	}
+}
 
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+	if(hadc == &hadc1) {
+		HAL_ADC_Stop_IT(&hadc1);
+		uint32_t AD_value = HAL_ADC_GetValue(&hadc1);
+		adc_value = (float) AD_value * 3.3 / 4096;
+		/**
+		*here is the poly function of R(\lambda)
+		*
+		*/
+		LED_dis();
+	}
+}
 /* USER CODE END 4 */
 
 /**
