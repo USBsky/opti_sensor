@@ -1,0 +1,28 @@
+--cpu=Cortex-M4.fp.sp
+"optielectronic_sensor\startup_stm32f411xe.o"
+"optielectronic_sensor\main.o"
+"optielectronic_sensor\stm32f4xx_it.o"
+"optielectronic_sensor\stm32f4xx_hal_msp.o"
+"optielectronic_sensor\stm32f4xx_hal_adc.o"
+"optielectronic_sensor\stm32f4xx_hal_adc_ex.o"
+"optielectronic_sensor\stm32f4xx_ll_adc.o"
+"optielectronic_sensor\stm32f4xx_hal_rcc.o"
+"optielectronic_sensor\stm32f4xx_hal_rcc_ex.o"
+"optielectronic_sensor\stm32f4xx_hal_flash.o"
+"optielectronic_sensor\stm32f4xx_hal_flash_ex.o"
+"optielectronic_sensor\stm32f4xx_hal_flash_ramfunc.o"
+"optielectronic_sensor\stm32f4xx_hal_gpio.o"
+"optielectronic_sensor\stm32f4xx_hal_dma_ex.o"
+"optielectronic_sensor\stm32f4xx_hal_dma.o"
+"optielectronic_sensor\stm32f4xx_hal_pwr.o"
+"optielectronic_sensor\stm32f4xx_hal_pwr_ex.o"
+"optielectronic_sensor\stm32f4xx_hal_cortex.o"
+"optielectronic_sensor\stm32f4xx_hal.o"
+"optielectronic_sensor\stm32f4xx_hal_exti.o"
+"optielectronic_sensor\stm32f4xx_hal_tim.o"
+"optielectronic_sensor\stm32f4xx_hal_tim_ex.o"
+"optielectronic_sensor\system_stm32f4xx.o"
+--library_type=microlib --strict --scatter "optielectronic_sensor\optielectronic_sensor.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "optielectronic_sensor.map" -o optielectronic_sensor\optielectronic_sensor.axf
