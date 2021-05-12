@@ -22,6 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "arm_math.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,6 +38,7 @@ typedef struct LED_Controller {
 	uint8_t ptr;
 	uint16_t led_encode;
 	uint16_t led_sel;
+	uint8_t dot_plc;
 }LED_Controller;
 /* USER CODE END PTD */
 
@@ -54,6 +56,7 @@ typedef struct LED_Controller {
 ADC_HandleTypeDef hadc1;
 
 TIM_HandleTypeDef htim10;
+TIM_HandleTypeDef htim11;
 
 /* USER CODE BEGIN PV */
 volatile LED_Controller led_ctrl;
@@ -66,6 +69,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM10_Init(void);
+static void MX_TIM11_Init(void);
 /* USER CODE BEGIN PFP */
 void LED_init(void);
 void LED_Controller_init(void);
@@ -95,7 +99,6 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-	
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -109,10 +112,12 @@ int main(void)
   MX_GPIO_Init();
   MX_ADC1_Init();
   MX_TIM10_Init();
+  MX_TIM11_Init();
   /* USER CODE BEGIN 2 */
-	HAL_TIM_Base_Start_IT(&htim10);
-	LED_Controller_init();
 	LED_init();
+	LED_Controller_init();
+	HAL_TIM_Base_Start_IT(&htim10);
+	HAL_TIM_Base_Start_IT(&htim11);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -122,7 +127,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		LED_Controller_setdata(3.1415926);
   }
   /* USER CODE END 3 */
 }
@@ -236,9 +240,9 @@ static void MX_TIM10_Init(void)
 
   /* USER CODE END TIM10_Init 1 */
   htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 9999;
+  htim10.Init.Prescaler = 99;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 9999;
+  htim10.Init.Period = 99;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
@@ -248,6 +252,37 @@ static void MX_TIM10_Init(void)
   /* USER CODE BEGIN TIM10_Init 2 */
 
   /* USER CODE END TIM10_Init 2 */
+
+}
+
+/**
+  * @brief TIM11 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM11_Init(void)
+{
+
+  /* USER CODE BEGIN TIM11_Init 0 */
+
+  /* USER CODE END TIM11_Init 0 */
+
+  /* USER CODE BEGIN TIM11_Init 1 */
+
+  /* USER CODE END TIM11_Init 1 */
+  htim11.Instance = TIM11;
+  htim11.Init.Prescaler = 9999;
+  htim11.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim11.Init.Period = 9999;
+  htim11.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim11.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim11) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM11_Init 2 */
+
+  /* USER CODE END TIM11_Init 2 */
 
 }
 
@@ -293,9 +328,11 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-	if(htim == &htim10) {
-		HAL_ADC_Start_IT(&hadc1);
+	if(htim->Instance == TIM10) {
 		LED_dis();
+	}
+	if(htim->Instance == TIM11) {
+		HAL_ADC_Start_IT(&hadc1);
 	}
 }
 
@@ -303,6 +340,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 		HAL_ADC_Stop_IT(&hadc1);
 		uint32_t AD_value = HAL_ADC_GetValue(&hadc1);
 		adc_value = (double) AD_value * 3.3 / 4096;
+	  const double A = 0.0009321, B = -0.5941, C = 111.5, R = 250;
+		volatile double Rx = (5.0 * R) / adc_value - R, distance = A * Rx * Rx + B * Rx + C;
+		LED_Controller_setdata(distance);
 }
 
 
@@ -324,12 +364,23 @@ void LED_init() {
 
 void LED_Controller_init() {
 		led_ctrl.ptr = 0;
+		led_ctrl.led_encode = 0;
+		led_ctrl.led_sel = 0;
+		for(int i = 0; i < 8; i++) {
+			led_ctrl.led_encode = led_ctrl.led_encode | led.ledx[i];
+		}
+		for(int i = 0; i < 3; i++) {
+			led_ctrl.led_sel = led_ctrl.led_sel | led.led_sel[i];
+		}
+		HAL_GPIO_WritePin(GPIOB, led_ctrl.led_encode, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOC, led_ctrl.led_sel, GPIO_PIN_RESET);
 }
 
 void LED_Controller_setdata(float data) {
 		int inter = (int) data;
 		int ptr  = 0;
 	while (inter > 0 && ptr < 4) {
+		led_ctrl.dot_plc = ptr;
 		led_ctrl.data[ptr++] = inter % 10;
 		inter /= 10;
 	}
@@ -343,8 +394,8 @@ void LED_Controller_setdata(float data) {
 
 
 void LED_dis() {
-	HAL_GPIO_WritePin(GPIOB, led_ctrl.led_encode, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOC, led_ctrl.led_sel, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOB, led_ctrl.led_encode, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOC, led_ctrl.led_sel, GPIO_PIN_RESET);
 	unsigned char data = led_ctrl.data[led_ctrl.ptr];
 	switch(data) {
 		case 0 : led_ctrl.led_encode = led.ledx[0] | led.ledx[1] | led.ledx[2] | led.ledx[3] | led.ledx[4] | led.ledx[5];
@@ -363,19 +414,23 @@ void LED_dis() {
 		break;
 		case 7 : led_ctrl.led_encode = led.ledx[0] | led.ledx[1] | led.ledx[2];
 		break;
-		case 8 : led_ctrl.led_encode = led.ledx[0] | led.ledx[1] | led.ledx[2] | led.ledx[3] | led.ledx[4] | led.ledx[6] \
-		|	led.ledx[5];
+		case 8 : led_ctrl.led_encode = led.ledx[0] | led.ledx[1] | led.ledx[2] | led.ledx[3] | led.ledx[4] | led.ledx[5] \
+		|	led.ledx[6];
 		break;
-		case 9 : led_ctrl.led_encode = led.ledx[0] | led.ledx[1] | led.ledx[2] | led.ledx[3] | led.ledx[4] | led.ledx[6];
+		case 9 : led_ctrl.led_encode = led.ledx[0] | led.ledx[1] | led.ledx[2] | led.ledx[3] | led.ledx[5] | led.ledx[6];
+	}
+	if(led_ctrl.ptr == led_ctrl.dot_plc) {
+		led_ctrl.led_encode = led_ctrl.led_encode | led.ledx[7];
 	}
 	switch(led_ctrl.ptr) {
-		case 0 : led_ctrl.led_sel = led.led_sel[0]; led_ctrl.led_encode = led_ctrl.led_encode | led.ledx[7]; led_ctrl.ptr = 2; break;
-		case 1 : led_ctrl.led_sel = led.led_sel[1]; led_ctrl.ptr = 3; break;
-		case 2 : led_ctrl.led_sel = led.led_sel[2]; led_ctrl.ptr = 4; break;
-		case 3 : led_ctrl.led_sel = led.led_sel[3]; led_ctrl.ptr = 1; break;
+		case 0 : led_ctrl.led_sel = led.led_sel[0]; led_ctrl.ptr = 1; break;
+		case 1 : led_ctrl.led_sel = led.led_sel[1]; led_ctrl.ptr = 2; break;
+		case 2 : led_ctrl.led_sel = led.led_sel[2]; led_ctrl.ptr = 3; break;
+		case 3 : led_ctrl.led_sel = led.led_sel[3]; led_ctrl.ptr = 0; break;
 	}
-	HAL_GPIO_WritePin(GPIOB, led_ctrl.led_encode, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOC, led_ctrl.led_sel, GPIO_PIN_RESET);
+
+	HAL_GPIO_WritePin(GPIOB, led_ctrl.led_encode, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, led_ctrl.led_sel, GPIO_PIN_SET);
 }
 
 
